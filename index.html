@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>People Dev Command Center</title>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
+    <style>
+        :root {
+            --bg-body: #f1f5f9;
+            --bg-card: #ffffff;
+            --bg-nav: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --primary: #2563eb;
+            --success: #16a34a;
+            --accent-gl: #f59e0b;
+            --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            --timeline-bg: #0f172a;
+            --hud-bg: rgba(15, 23, 42, 0.95);
+        }
+
+        [data-theme="dark"] {
+            --bg-body: #020617;
+            --bg-card: #1e293b;
+            --bg-nav: #0f172a;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --primary: #3b82f6;
+            --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.4);
+            --timeline-bg: #1e293b;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            padding-bottom: 380px;
+            /* Space extra untuk dashboard bawah */
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* UTILS */
+        .fw-800 {
+            font-weight: 800;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .img-cover {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #64748b;
+            border-radius: 4px;
+        }
+
+        /* PHOTO ZOOM */
+        #photoSpotlight {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.5);
+            width: 320px;
+            height: 320px;
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 50px 100px rgba(0, 0, 0, 0.6);
+            z-index: 10000;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+            border: 6px solid var(--primary);
+            padding: 4px;
+        }
+
+        #photoSpotlight.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        #photoSpotlight img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 14px;
+        }
+
+        /* NAVBAR & STATS */
+        .navbar-custom {
+            background: var(--bg-nav);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 0;
+        }
+
+        .theme-toggle {
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            transition: 0.2s;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .stats-capsule {
+            background: var(--bg-body);
+            border: 1px solid var(--border-color);
+            border-radius: 50px;
+            padding: 5px 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        /* MAIN GRID */
+        .gl-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            gap: 25px;
+            padding: 30px 4%;
+        }
+
+        .card-gl {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: var(--shadow-card);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            transition: transform 0.2s;
+            overflow: hidden;
+        }
+
+        .card-gl:hover {
+            transform: translateY(-4px);
+            border-color: var(--primary);
+        }
+
+        .gl-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: linear-gradient(to right, rgba(37, 99, 235, 0.05), transparent);
+        }
+
+        .gl-avatar {
+            width: 45px;
+            height: 45px;
+            flex-shrink: 0;
+            background: linear-gradient(135deg, var(--primary), #1d4ed8);
+            color: white;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            border: 2px solid var(--bg-card);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            cursor: zoom-in;
+        }
+
+        /* MECHANIC CARD */
+        .mechanic-list {
+            padding: 15px;
+            flex-grow: 1;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .card-mech {
+            background: var(--bg-body);
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .card-mech:hover {
+            border-color: var(--primary);
+            background: rgba(59, 130, 246, 0.08);
+        }
+
+        .mech-avatar {
+            width: 38px;
+            height: 38px;
+            flex-shrink: 0;
+            background: var(--bg-card);
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.85rem;
+            overflow: hidden;
+            cursor: zoom-in;
+            position: relative;
+            z-index: 2;
+        }
+
+        .mech-avatar:hover {
+            transform: scale(1.1);
+            border-color: var(--primary);
+        }
+
+        /* HUD PREVIEW */
+        #hudPreview {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            width: 400px;
+            max-height: 550px;
+            background: var(--hud-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+            border-radius: 20px;
+            z-index: 9998;
+            color: #fff;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        #hudPreview.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .hud-body {
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        /* ================================================= */
+        /* SNAKE TIMELINE CSS (The "S" Logic) */
+        /* ================================================= */
+        .bottom-dash {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 350px;
+            /* Lebih tinggi sedikit */
+            background: var(--timeline-bg);
+            border-top: 4px solid var(--primary);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .bd-header {
+            padding: 10px 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .snake-scroll-area {
+            flex-grow: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 20px 40px;
+            background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .snake-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            margin-bottom: 40px;
+            height: 100px;
+        }
+
+        /* Baris Horizontal Garis */
+        .snake-row::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 50%;
+            height: 4px;
+            background: #475569;
+            z-index: 0;
+        }
+
+        /* CARD STYLE DALAM SNAKE */
+        .snake-col {
+            position: relative;
+            z-index: 1;
+            width: 16%;
+            /* Muat 6 item per baris (100/6) */
+            display: flex;
+            justify-content: center;
+        }
+
+        .snake-card {
+            background: rgba(30, 41, 59, 0.95);
+            border: 1px solid #475569;
+            color: #fff;
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            width: 160px;
+            text-align: center;
+            transition: 0.2s;
+            position: relative;
+        }
+
+        .snake-card:hover {
+            transform: scale(1.1);
+            border-color: var(--primary);
+            z-index: 10;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+        }
+
+        .snake-dot {
+            width: 12px;
+            height: 12px;
+            background: var(--primary);
+            border-radius: 50%;
+            margin: -6px auto 5px auto;
+            border: 2px solid #0f172a;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* CONNECTOR U-TURN (Kurva S) */
+        .u-turn {
+            position: absolute;
+            width: 50px;
+            height: 144px;
+            /* Height = Row height + Margin bottom */
+            border: 4px solid #475569;
+            top: 50%;
+            z-index: 0;
+        }
+
+        /* U-Turn Kanan (Turun dari baris Ganjil ke Genap) */
+        .u-turn.right {
+            right: 0;
+            border-left: none;
+            border-radius: 0 20px 20px 0;
+        }
+
+        /* U-Turn Kiri (Turun dari baris Genap ke Ganjil) */
+        .u-turn.left {
+            left: 0;
+            border-right: none;
+            border-radius: 20px 0 0 20px;
+        }
+
+        /* LOADER */
+        /* ========================================= */
+        /* NEW ADVANCED LOADER CSS */
+        /* ========================================= */
+        .loader-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-body);
+            z-index: 20000;
+            /* Layer paling atas */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            transition: opacity 0.5s ease;
+        }
+
+        .loader-content {
+            text-align: center;
+            width: 300px;
+        }
+
+        /* Logo Animasi */
+        .loader-icon {
+            font-size: 3rem;
+            color: var(--primary);
+            margin-bottom: 20px;
+            animation: pulse 1.5s infinite;
+        }
+
+        /* Judul Loading */
+        .loader-title {
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+        }
+
+        /* Subtext Status (yang berubah-ubah) */
+        .loader-status {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            font-family: 'JetBrains Mono', monospace;
+            min-height: 20px;
+        }
+
+        /* Container Progress Bar */
+        .progress-track {
+            width: 100%;
+            height: 6px;
+            background: rgba(0, 0, 0, 0.1);
+            /* Warna track redup */
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Batang Progress Bergerak */
+        .progress-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, var(--primary), #60a5fa, var(--primary));
+            background-size: 200% 100%;
+            border-radius: 10px;
+            animation: loadingScan 2s linear infinite;
+            transform-origin: left;
+        }
+
+        /* Mode Gelap Penyesuaian */
+        [data-theme="dark"] .progress-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* ANIMASI */
+        @keyframes loadingScan {
+            0% {
+                background-position: 100% 0;
+            }
+
+            100% {
+                background-position: -100% 0;
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.1);
+                opacity: 0.7;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* Modal History Styling */
+        .hist-v-line {
+            border-left: 2px solid #334155;
+            margin-left: 7px;
+            padding-left: 25px;
+            padding-bottom: 25px;
+            position: relative;
+        }
+
+        .hist-v-dot {
+            position: absolute;
+            left: -6px;
+            top: 0;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 3px solid #0f172a;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="loader" class="loader-overlay">
+        <div class="loader-content">
+            <div class="loader-icon"><i class="bi bi-cpu-fill"></i></div>
+            <h5 class="loader-title">SYSTEM INITIALIZING</h5>
+            <p class="loader-status" id="loaderText">Menghubungkan ke Server...</p>
+
+            <div class="progress-track">
+                <div class="progress-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="photoSpotlight">
+        <img id="spotlightImg" src="" alt="Zoom Foto">
+    </div>
+
+    <div id="hudPreview">
+        <div class="hud-header"
+            style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); display:flex; gap:15px; align-items:center;">
+            <div class="hud-img-box" id="hudImg" style="width:50px; height:50px; border-radius:50%; overflow:hidden;">
+            </div>
+            <div>
+                <h6 class="mb-0 fw-800 text-info" id="hudName">Nama Mekanik</h6>
+                <div class="d-flex gap-2 text-white-50 small">
+                    <span id="hudID" class="font-mono">ID: -</span>
+                    <span>|</span>
+                    <span>Riwayat</span>
+                </div>
+            </div>
+        </div>
+        <div class="hud-body" id="hudContent" style="padding:15px;"></div>
+    </div>
+
+    <nav class="navbar navbar-custom sticky-top">
+        <div class="container-fluid px-4">
+            <div class="d-flex align-items-center gap-3">
+                <i class="bi bi-cpu-fill text-primary fs-4"></i>
+                <span class="brand-text fw-800" style="font-size:1.2rem">GLwali<span
+                        class="text-primary">Monitor</span>PlantAsto</span>
+            </div>
+
+            <div class="d-none d-lg-flex stats-capsule">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center"
+                        style="width:30px; height:30px;"><i class="bi bi-people-fill"></i></div>
+                    <div style="line-height:1">
+                        <div class="fw-800 text-main" id="totalMech" style="font-size:0.9rem">...</div>
+                        <small class="text-muted" style="font-size:0.65rem; font-weight:700">MEKANIK</small>
+                    </div>
+                </div>
+                <div style="width:1px; height:20px; background:var(--border-color);"></div>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="bg-warning bg-opacity-10 text-warning rounded-circle d-flex align-items-center justify-content-center"
+                        style="width:30px; height:30px;"><i class="bi bi-person-badge-fill"></i></div>
+                    <div style="line-height:1">
+                        <div class="fw-800 text-main" id="totalGL" style="font-size:0.9rem">...</div>
+                        <small class="text-muted" style="font-size:0.65rem; font-weight:700">GROUP LEADER</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+                <div class="theme-toggle" onclick="toggleTheme()" title="Mode Gelap/Terang">
+                    <i id="themeIcon" class="bi bi-moon-stars-fill"></i>
+                </div>
+                <button class="btn btn-primary btn-sm rounded-pill fw-bold px-3 ms-2" onclick="initApp()">
+                    <i class="bi bi-arrow-repeat"></i> Refresh
+                </button>
+                <button class="btn btn-success btn-sm rounded-pill fw-bold px-3" onclick="downloadExcel()">
+                    <i class="bi bi-file-earmark-excel-fill"></i> Excel
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="gl-grid" id="glContainer"></div>
+
+    <div class="bottom-dash">
+        <div class="bd-header">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-git text-warning"></i>
+                <span class="fw-bold">Historical Rotation Mekanik plant ASTO</span>
+            </div>
+            <small class="font-mono text-white-50">Powered by PPDASTO</small>
+        </div>
+
+        <div class="snake-scroll-area" id="snakeContainer">
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalDetail" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content border-0 overflow-hidden">
+                <div class="modal-body p-0">
+                    <div class="row g-0">
+                        <div class="col-md-7 bg-dark p-4 text-white"
+                            style="height:600px; overflow-y:auto; border-right:1px solid #334155;">
+                            <h5 class="fw-bold mb-4 text-warning"><i class="bi bi-clock-history"></i> Riwayat Lengkap
+                            </h5>
+                            <div id="modalHistList"></div>
+                        </div>
+                        <div class="col-md-5 p-4 bg-body text-body" style="height:600px; overflow-y:auto;">
+                            <div class="d-flex justify-content-between mb-3">
+                                <h5 class="fw-bold">Control Panel</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+
+                            <div class="card shadow-sm border-0 bg-primary bg-opacity-10 mb-4">
+                                <div class="card-body d-flex gap-3 align-items-center">
+                                    <div class="mech-avatar"
+                                        style="width:60px; height:60px; border:2px solid var(--primary);"
+                                        id="m_img_box"></div>
+                                    <div>
+                                        <h4 class="fw-800 text-primary mb-0" id="m_nama">Nama</h4>
+                                        <small class="font-mono text-muted fw-bold" id="m_id"
+                                            style="font-size:0.9rem">ID: 000</small>
+                                        <div class="d-flex gap-3 small fw-bold mt-1">
+                                            <span><i class="bi bi-geo-alt"></i> <span id="m_area">-</span></span>
+                                            <span><i class="bi bi-person"></i> <span id="m_gl">-</span></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <form id="formMutasi" onsubmit="handleMutasi(event)">
+                                <input type="hidden" id="input_id">
+                                <h6 class="fw-bold text-danger mb-3 border-bottom pb-2">Form Perubahan Data GL_WALI &
+                                    Section area</h6>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold">Tipe Mutasi</label>
+                                    <select class="form-select" id="input_type" onchange="toggleFormType()">
+                                        <option value="PINDAH_AREA">Pindah Lokasi Kerja</option>
+                                        <option value="GANTI_GL">Ganti Bapak Asuh</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold">Data Baru</label>
+                                    <select class="form-select" id="select_area"></select>
+                                    <select class="form-select" id="select_gl" style="display:none"></select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold">Alasan</label>
+                                    <textarea class="form-control" id="input_alasan" rows="3" required></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100 fw-bold py-2" id="btnSimpan">Simpan
+                                    Perubahan</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // ============================================
+        // PASTE URL GOOGLE APPS SCRIPT ANDA DISINI
+        // ============================================
+        const API_URL = "https://script.google.com/macros/s/AKfycbzsvyCJ7R3WbZbsEnGF3Z5QKkLrvCio554R_o8fFC-QAW5Se2BANG6e-MyLxohBDvTV/exec";
+
+        let gData = { gl: [], area: [], mech: [], hist: [] };
+        let modalInstance;
+
+        // Theme Toggle
+        function toggleTheme() {
+            const body = document.body;
+            const current = body.getAttribute('data-theme');
+            const newVal = current === 'dark' ? 'light' : 'dark';
+            body.setAttribute('data-theme', newVal);
+            document.getElementById('themeIcon').className = newVal === 'dark' ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill';
+            localStorage.setItem('theme', newVal);
+        }
+        document.body.setAttribute('data-theme', localStorage.getItem('theme') || 'light');
+
+        // Init App
+        // Variable global untuk interval teks loading
+        let loadingInterval;
+
+        function initApp() {
+            // 1. Tampilkan Loader
+            const loader = document.getElementById('loader');
+            loader.style.opacity = '1';
+            loader.style.display = 'flex';
+
+            // 2. Logika Teks Berjalan (Simulasi Proses)
+            const statusText = document.getElementById('loaderText');
+            const messages = [
+                "Sinkronisasi Database Google Sheets...",
+                "Mengunduh Data Karyawan...",
+                "Memproses Data Group Leader...",
+                "Menghitung Statistik Area...",
+                "Membangun Visualisasi Grafik...",
+                "Finalizing Dashboard..."
+            ];
+            let step = 0;
+
+            // Ganti teks setiap 1.5 detik
+            loadingInterval = setInterval(() => {
+                if (step < messages.length) {
+                    statusText.innerText = messages[step];
+                    step++;
+                }
+            }, 1500);
+
+            // 3. Fetch Data Asli
+            fetch(API_URL + "?action=getData")
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status && data.status === 'error') throw new Error(data.message);
+                    gData = data;
+
+                    // Render UI
+                    if (gData.dataMekanik) document.getElementById('totalMech').innerText = gData.dataMekanik.length;
+                    if (gData.dataGL) document.getElementById('totalGL').innerText = gData.dataGL.length;
+
+                    renderMainGrid();
+                    renderSnakeTimeline();
+                    populateDropdowns();
+
+                    // 4. Selesai Loading
+                    clearInterval(loadingInterval); // Hentikan teks berjalan
+                    statusText.innerText = "Selesai!";
+
+                    // Efek Fade Out
+                    loader.style.opacity = '0';
+                    setTimeout(() => {
+                        loader.style.display = 'none';
+                    }, 500); // Tunggu animasi fade out selesai
+                })
+                .catch(err => {
+                    clearInterval(loadingInterval);
+                    statusText.innerText = "Gagal Terhubung!";
+                    statusText.style.color = "red";
+                    alert("Gagal Memuat Data: " + err);
+                    // Jangan hide loader jika error, biar user tau
+                });
+        }
+
+        // --- EXCEL ---
+        function downloadExcel() {
+            if (!gData.dataMekanik || gData.dataMekanik.length === 0) { alert("Data belum dimuat."); return; }
+            const exportData = [['ID Karyawan', 'Nama Mekanik', 'Group Leader', 'Instruktur', 'Area', 'Foto URL']];
+            gData.dataMekanik.forEach(m => exportData.push(m));
+            const ws = XLSX.utils.aoa_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Data Mekanik");
+            XLSX.writeFile(wb, `Data_Mekanik_${new Date().toISOString().slice(0, 10)}.xlsx`);
+        }
+
+        // --- SPOTLIGHT ---
+        function showSpotlight(url) {
+            if (!url || url.length < 5) return;
+            const spot = document.getElementById('photoSpotlight');
+            document.getElementById('spotlightImg').src = url;
+            spot.classList.add('active');
+        }
+        function hideSpotlight() { document.getElementById('photoSpotlight').classList.remove('active'); }
+
+        // Helper Avatar
+        function getAvatarHTML(url, name, className = "img-cover") {
+            if (url && url.length > 5) {
+                return `<img src="${url}" class="${className}" 
+                        onmouseenter="showSpotlight('${url}')"
+                        onmouseleave="hideSpotlight()"
+                        onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                        <div style="display:none; width:100%; height:100%; align-items:center; justify-content:center;">${name.charAt(0)}</div>`;
+            }
+            return `<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center;">${name.charAt(0)}</div>`;
+        }
+
+        // 1. Render GL Grid
+        function renderMainGrid() {
+            const container = document.getElementById('glContainer');
+            container.innerHTML = '';
+            gData.dataGL.forEach(glObj => {
+                const anakAsuh = gData.dataMekanik.filter(m => String(m[2]) === String(glObj.name));
+                let mechHTML = anakAsuh.length === 0 ? '<div class="text-center text-muted small py-3">Kosong</div>' : '';
+
+                anakAsuh.forEach(m => {
+                    const mechAvatar = getAvatarHTML(m[5], m[1]);
+                    mechHTML += `
+                        <div class="card-mech" onclick="openDetail('${m[0]}')" onmouseenter="showHUD('${m[0]}', '${m[1]}', '${m[5]}')" onmouseleave="hideHUD()">
+                            <div class="mech-avatar">${mechAvatar}</div>
+                            <div style="flex-grow:1">
+                                <div class="fw-bold text-main" style="font-size:0.9rem">${m[1]}</div>
+                                <div class="font-mono text-primary small fw-bold" style="font-size:0.75rem">ID: ${m[0]}</div>
+                                <small class="text-muted" style="font-size:0.75rem">${m[4]}</small>
+                            </div>
+                            <i class="bi bi-chevron-right text-muted" style="font-size:0.8rem"></i>
+                        </div>`;
+                });
+
+                const glAvatar = getAvatarHTML(glObj.photo, glObj.name);
+                container.innerHTML += `
+                    <div class="card-gl">
+                        <div class="gl-header">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="gl-avatar">${glAvatar}</div>
+                                <div><h6 class="mb-0 fw-bold">${glObj.name}</h6><small class="text-muted">Group Leader</small></div>
+                            </div>
+                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary rounded-pill">${anakAsuh.length} Staff</span>
+                        </div>
+                        <div class="mechanic-list">${mechHTML}</div>
+                    </div>`;
+            });
+        }
+
+        // 2. HUD Preview
+        function showHUD(id, nama, photoUrl) {
+            const hud = document.getElementById('hudPreview');
+            document.getElementById('hudName').innerText = nama;
+            document.getElementById('hudID').innerText = "ID: " + id;
+
+            const safePhoto = (photoUrl && photoUrl !== 'undefined') ? photoUrl : '';
+            document.getElementById('hudImg').innerHTML = getAvatarHTML(safePhoto, nama);
+
+            const content = document.getElementById('hudContent');
+            content.innerHTML = '<div style="border-left:2px solid #334155; margin-left:7px; height:100%; position:absolute; left:20px;"></div>';
+
+            const hist = gData.dataHistory.filter(h => String(h[1]) === String(id)).sort((a, b) => new Date(b[0]) - new Date(a[0])).slice(0, 5);
+
+            if (hist.length === 0) content.innerHTML += `<div class="text-center text-white-50 small py-4">Belum ada riwayat</div>`;
+            else {
+                hist.forEach(h => {
+                    let color = h[3].includes('GL') ? '#f59e0b' : '#3b82f6';
+                    let dateStr = new Date(h[0]).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: '2-digit' });
+                    content.innerHTML += `
+                        <div style="position:relative; margin-bottom:15px; padding-left:25px;">
+                            <div style="position:absolute; left:2px; top:4px; width:10px; height:10px; border-radius:50%; background:${color}; box-shadow:0 0 5px ${color}"></div>
+                            <div class="small font-mono text-white-50">${dateStr}</div>
+                            <div style="font-size:0.85rem; color:#fff"><strong style="color:${color}">${h[3]}</strong> ke ${h[5]}</div>
+                        </div>`;
+                });
+            }
+            hud.classList.add('active');
+        }
+        function hideHUD() { document.getElementById('hudPreview').classList.remove('active'); }
+
+        // 3. SNAKE TIMELINE RENDERER (THE CORE LOGIC)
+        function renderSnakeTimeline() {
+            const container = document.getElementById('snakeContainer');
+            container.innerHTML = '';
+
+            // 1. Ambil 60 Data Terakhir
+            const rawData = gData.dataHistory.slice(-60); // Ambil 60 terakhir
+            // Data di Excel: Lama -> Baru
+            // Kita ingin yang Baru di Paling Kiri Atas (Start of Snake)
+            const sortedData = [...rawData].reverse(); // Sekarang: Baru -> Lama
+
+            const itemsPerRow = 6; // Tetapkan 6 kartu per baris agar rapi
+            const rows = [];
+
+            // 2. Pecah Array jadi Chunks (Baris)
+            for (let i = 0; i < sortedData.length; i += itemsPerRow) {
+                rows.push(sortedData.slice(i, i + itemsPerRow));
+            }
+
+            // 3. Render Setiap Baris
+            rows.forEach((rowItems, rowIndex) => {
+                const isEvenRow = (rowIndex % 2 !== 0); // Baris 1 (index 0) = Ganjil (Normal), Baris 2 (index 1) = Genap (Terbalik)
+
+                // Jika Baris Genap (ke-2, ke-4), kita harus membalik urutan itemnya
+                // agar visualnya mengalir dari Kanan ke Kiri
+                const displayItems = isEvenRow ? [...rowItems].reverse() : rowItems;
+
+                // Buat Container Baris
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'snake-row';
+
+                // Render Item dalam Baris
+                let itemsHTML = '';
+
+                // Jika Baris Genap, kita butuh spacer di kiri jika item kurang dari 6
+                // (Agar item mepet ke kanan)
+                if (isEvenRow && displayItems.length < itemsPerRow) {
+                    const spacers = itemsPerRow - displayItems.length;
+                    for (let k = 0; k < spacers; k++) itemsHTML += `<div class="snake-col"></div>`;
+                }
+
+                displayItems.forEach(h => {
+                    let dateStr = new Date(h[0]).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+                    let color = h[3].includes('GL') ? '#f59e0b' : '#3b82f6';
+
+                    itemsHTML += `
+                        <div class="snake-col">
+                            <div class="snake-dot" style="background:${color}"></div>
+                            <div class="snake-card">
+                                <div class="fw-bold text-warning text-truncate">${h[2]}</div>
+                                <div class="d-flex justify-content-between my-1 border-bottom border-secondary pb-1">
+                                    <span class="badge border border-light" style="font-size:0.6rem">${h[3]}</span>
+                                    <span class="text-white-50 font-mono" style="font-size:0.6rem">${dateStr}</span>
+                                </div>
+                                <div class="text-truncate" style="font-size:0.7rem">Ke: ${h[5]}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                // Jika Baris Ganjil, spacer di kanan (Standard flex start handles this usually, but let's be safe)
+                // (Flex default left align, so no spacer needed for Odd rows)
+
+                rowDiv.innerHTML = itemsHTML;
+
+                // 4. Tambahkan Konektor U-Turn (S-Curve)
+                // Jika ini BUKAN baris terakhir, tambahkan konektor ke baris berikutnya
+                if (rowIndex < rows.length - 1) {
+                    const connector = document.createElement('div');
+                    connector.className = isEvenRow ? 'u-turn left' : 'u-turn right';
+                    rowDiv.appendChild(connector);
+                }
+
+                container.appendChild(rowDiv);
+            });
+        }
+
+        // 4. Modal Detail
+        function openDetail(idStr) {
+            const m = gData.dataMekanik.find(x => String(x[0]) === String(idStr));
+            if (!m) return;
+            document.getElementById('m_nama').innerText = m[1];
+            document.getElementById('m_id').innerText = "ID: " + m[0];
+            document.getElementById('m_area').innerText = m[4];
+            document.getElementById('m_gl').innerText = m[2];
+            document.getElementById('input_id').value = m[0];
+
+            const safePhoto = (m[5] && m[5] !== 'undefined') ? m[5] : '';
+            document.getElementById('m_img_box').innerHTML = getAvatarHTML(safePhoto, m[1]);
+
+            const histContainer = document.getElementById('modalHistList');
+            histContainer.innerHTML = '';
+            const hist = gData.dataHistory.filter(h => String(h[1]) === String(idStr));
+
+            if (hist.length === 0) histContainer.innerHTML = '<p class="text-white-50">Belum ada history.</p>';
+            else {
+                hist.sort((a, b) => new Date(b[0]) - new Date(a[0])).forEach(h => {
+                    let d = new Date(h[0]);
+                    let color = h[3].includes('GL') ? '#f59e0b' : '#3b82f6';
+                    histContainer.innerHTML += `
+                        <div class="hist-v-line">
+                            <div class="hist-v-dot" style="background:${color}"></div>
+                            <small class="font-mono text-white-50">${d.toLocaleString('id-ID')}</small>
+                            <div class="mt-1 bg-secondary bg-opacity-25 p-3 rounded border border-secondary">
+                                <h6 class="fw-bold" style="color:${color}">${h[3]}</h6>
+                                <div class="small text-white">Dari <span class="text-danger text-decoration-line-through">${h[4]}</span> ke <span class="text-success fw-bold">${h[5]}</span></div>
+                                <div class="mt-2 text-white-50 small fst-italic">"${h[6]}"</div>
+                            </div>
+                        </div>`;
+                });
+            }
+            modalInstance = new bootstrap.Modal(document.getElementById('modalDetail'));
+            modalInstance.show();
+        }
+
+        // 5. Form Logic
+        function populateDropdowns() {
+            const glNames = gData.dataGL.map(o => o.name);
+            document.getElementById('select_gl').innerHTML = glNames.map(x => `<option value="${x}">${x}</option>`).join('');
+            document.getElementById('select_area').innerHTML = gData.dataArea.map(x => `<option value="${x}">${x}</option>`).join('');
+        }
+        function toggleFormType() {
+            const t = document.getElementById('input_type').value;
+            document.getElementById('select_gl').style.display = (t === 'GANTI_GL') ? 'block' : 'none';
+            document.getElementById('select_area').style.display = (t === 'PINDAH_AREA') ? 'block' : 'none';
+        }
+        function handleMutasi(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnSimpan');
+            btn.innerHTML = 'Menyimpan...'; btn.disabled = true;
+            const type = document.getElementById('input_type').value;
+            const newVal = type === 'GANTI_GL' ? document.getElementById('select_gl').value : document.getElementById('select_area').value;
+
+            fetch(API_URL, {
+                method: "POST",
+                body: JSON.stringify({
+                    idMekanik: document.getElementById('input_id').value,
+                    type: type,
+                    newValue: newVal,
+                    alasan: document.getElementById('input_alasan').value
+                })
+            })
+                .then(res => res.json())
+                .then(d => {
+                    if (d.status === 'success') { alert('Sukses!'); modalInstance.hide(); initApp(); }
+                    else { alert(d.message); }
+                })
+                .finally(() => { btn.innerHTML = 'Simpan Perubahan'; btn.disabled = false; });
+        }
+        window.onload = initApp;
+    </script>
+</body>
+
+</html>
